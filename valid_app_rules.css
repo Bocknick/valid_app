@@ -96,28 +96,36 @@
   position: relative;
   display: inline-block;
 }
+
 input {
   border: 1px solid transparent;
-  background-color: #f1f1f1;
+  background-color: #fff;
   padding: 10px;
   font-size: 16px;
-  font-family: Menlo,Consolas,monaco,monospace;padding:.8em 1em;
+  font-family: Menlo,Consolas,monaco,monospace;
   border-color: black;
 }
+
 input[type=text] {
-  background-color: #f1f1f1;
+  height: 45px;
+  background-color: #fff;
   font-family: Menlo,Consolas,monaco,monospace;padding:.8em 1em;
-  width: 100%;
 }
+
 input[type=submit] {
   background-color: #0397A8;
+  height: 45px;
+  cursor: pointer;
   font-family: Menlo,Consolas,monaco,monospace;padding:.8em 1em;
   border-color: black;
 }
+
 .autocomplete-items {
   position: absolute;
-  border: 1px solid #d4d4d4;
+  background-color: #fff;
+  border: 1px solid black;
   border-bottom: none;
+  font-family: Menlo,Consolas,monaco,monospace;padding:.8em 1em;
   border-top: none;
   z-index: 99;
   /*position the autocomplete items to be the same width as the container:*/
@@ -125,18 +133,21 @@ input[type=submit] {
   left: 0;
   right: 0;
 }
+
 .autocomplete-items div {
   padding: 10px;
   cursor: pointer;
   background-color: #fff;
   border-bottom: 1px solid #d4d4d4;
 }
+
 .autocomplete-items div:hover {
   /*when hovering an item:*/
-  background-color: #e9e9e9;
+  background-color: #0397A8;
 }
+
 .autocomplete-active {
   /*when navigating through the items using the arrow keys:*/
-  background-color: DodgerBlue !important;
+  background-color: #ffffff;
   color: #ffffff;
 }

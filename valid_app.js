@@ -24,11 +24,11 @@ container.innerHTML =
                 <a>Map</a>
             </div>
         </div>
-        <form id = 'wmo_form' autocomplete="off">
-            <div class="autocomplete" style="width:159px;">
-                <input id="wmo_input" type="text" placeholder="WMO">
+        <form id = 'wmo_form' autocomplete="off" style = "width:250px; display:flex; gap: 4px;">
+            <div class="autocomplete" style="flex: 2;">
+                <input id="wmo_input" type="text" placeholder="WMO" style = "width: 100%;">
             </div>
-            <input type="submit">
+            <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px;">
         </form>
         <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/Float_vs_Bottle_Table.txt" class = "file_link_button">Download Data</a>
         <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/README_FLOATvsBOTTLE.txt" class = "file_link_button">Readme</a><br>
@@ -165,6 +165,7 @@ async function make_map(selected_params,selected_wmo,goShip_only){
   let lat = map_data.map(row => row["LAT"]);
   let DIFF = map_data.map(row => row["DIFF"]);
   let WMO = map_data.map(row => row["WMO"]);
+  //let CRUISE = map_data.map(row => row["CRUISE"]);
 
   const {color_scale, min_value, mid_value, max_value } = make_palette(DIFF);
 
@@ -213,29 +214,46 @@ legend.onAdd = function () {
   const maxColor = color_scale(max_value).hex();
 
   div.innerHTML = `
-    <div style="display: flex; align-items: center;">
-      <div style="display: flex; flex-direction: column; align-items: center; margin-right: 10px;">
-        <div style="font-weight: bold; margin-bottom: 6px; text-align: center; width: 75px;">
+    <div 
+      style="
+        display: grid; 
+        align-items: center; 
+        grid-template-rows: 50px 100px;
+        grid-template-columns: 40px 40px;">
+      <div style="
+        grid-area: 1/1/1/2;
+        align-items: center;
+        margin-right: 10px;">
+        <div style="
+          font-weight: bold; 
+          margin-bottom: 6px; 
+          text-align: left; 
+          width: 75px;">
           Bottle - Float
         </div>
-        <div style="
+      </div>
+      <div style="
+          grid-area: 2/1/2/1;
           background: linear-gradient(
             to top,
             ${minColor} 0%,
             ${midColor} 50%,
             ${maxColor} 100%
           );
-          height: 150px; 
-          width: 20px; 
-          border: 1px solid black;
-          position: relative;
-        ">
-          <!-- Mid value label inside gradient removed -->
-        </div>
+          height: 100%;
+          width: 60%;
+          border: 1px solid black;">
       </div>
-      <div style="font-size: 12px; display: flex; flex-direction: column; justify-content: space-between; height: 150px;">
+      <div style="
+        font-size: 12px; 
+        display: flex;
+        height: 100%;
+        text-align: left;
+        flex-direction: column;
+        grid-area: 2/2/2/3;
+        justify-content: space-between">
         <div>${max_value.toFixed(2)}</div>
-        <div style="text-align: center;">${mid_value.toFixed(2)}</div>
+        <div>${mid_value.toFixed(2)}</div>
         <div>${min_value.toFixed(2)}</div>
       </div>
     </div>
@@ -245,7 +263,7 @@ legend.onAdd = function () {
   div.style.background = 'white';
   div.style.padding = '8px';
   div.style.boxShadow = '0 0 6px rgba(0,0,0,0.3)';
-  div.style.display = 'flex';
+  div.style.display = 'grid';
   div.style.alignItems = 'center';
 
   return div;
@@ -338,7 +356,7 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
       diff_data = calculate_diff(x1_data,x2_data,y1_data)
       x1_plot_data = diff_data.diff;
       y1_plot_data = diff_data.aux_filter;
-
+      console.log(x1_plot_data.length>3)
       //The following creates an array of the same length of param_titles_x and fills
       //with "Depth (m)"
       param_titles_y = Array(param_titles_x.length).fill("Depth")
@@ -350,6 +368,15 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
       ref_line_y1 = Math.max(...y1_plot_data.filter(Number.isFinite));
 
       stat_string_join = ""
+      if(x1_plot_data.length > 3){
+        diff_mean = ss.mean(x1_plot_data).toFixed(2)
+        diff_sd = ss.standardDeviation(x1_plot_data).toFixed(2)
+        diff_med = ss.median(x1_plot_data).toFixed(2)
+        stat_string = [`<b>Bottle-Float</b>`,`N = ${x1_plot_data.length}`,`Mean: ${diff_mean}`,
+          `Median: ${diff_med}`,`SD: ${diff_sd}`]
+        //Note that 
+        stat_string_join = stat_string.join("<br>")
+      }
     }
 
     var current_annotation = {
