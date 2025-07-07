@@ -111,7 +111,7 @@ plot_type_content.addEventListener("click",function(event){
       <a>pCO2</a>
       <a>Alkalinity</a>
       <a>Chlorophyll</a>
-      <a>Distance</a>`
+      <a>Location</a>`
     input_param = "Nitrate"
   } else{
     dropdown_options.innerHTML = 
@@ -189,7 +189,6 @@ async function make_map(selected_params,selected_wmo,goShip_only){
 
 
   for(let i = 0; i < lon.length; i++){
-    //current_color = getColor(distance[i],Math.min(distance),Math.max(distance))
     L.circleMarker([lat[i],lon[i]],
       {fillColor: color_scale(DIFF[i]).hex(),color: "black",weight: 0.5,fillOpacity: 1,radius: 2.5})
      
