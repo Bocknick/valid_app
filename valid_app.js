@@ -169,6 +169,9 @@ async function make_map(selected_params,selected_wmo,goShip_only){
 
   const {color_scale, min_value, mid_value, max_value } = make_palette(DIFF);
 
+  console.log(min_value)
+  console.log(mid_value)
+  console.log(max_value)
   var container = L.DomUtil.get('plot_content');
 
   if(container != null){
@@ -194,7 +197,7 @@ async function make_map(selected_params,selected_wmo,goShip_only){
     L.circleMarker([lat[i],lon[i]],
       {fillColor: color_scale(DIFF[i]).hex(),color: "black",weight: 0.5,fillOpacity: 1,radius: 2.5})
     .bindTooltip(tooltip_string, 
-      {permanent: false, direction: 'top', offset: [0, -5]})
+      {permanent: false, direction: 'top', offset: [0, -5], fillColor: '#0397A8'})
     .addTo(map)
   }
 
@@ -207,7 +210,7 @@ legend.onAdd = function () {
   const div = L.DomUtil.create('div', 'info legend');
 
   // Calculate mid value
-  const mid_value = (min_value + max_value) / 2;
+  //const mid_value = (min_value + max_value) / 2;
 
   // Get colors for min, mid, max
   const minColor = color_scale(min_value).hex();
