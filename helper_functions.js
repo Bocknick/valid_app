@@ -145,7 +145,7 @@ function make_palette(input_data){
   const min_value = Math.min(...input_data)
   const mid_value = ss.median(input_data)
   const max_value = Math.max(...input_data)
-  const color_scale =  chroma.scale(['A50026','FFFFBF','313695']).domain([min_value,mid_value, max_value]);
+  const color_scale =  chroma.scale(['5083BB','FFFFBF','DE3F2E']).domain([min_value,mid_value, max_value]);
   //const color_values = input_data.map(val => color_scale(val).hex());
 
   //Create binned values depending on specified resolution
