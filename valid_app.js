@@ -169,9 +169,6 @@ async function make_map(selected_params,selected_wmo,goShip_only){
 
   const {color_scale, min_value, mid_value, max_value } = make_palette(DIFF);
 
-  console.log(min_value)
-  console.log(mid_value)
-  console.log(max_value)
   var container = L.DomUtil.get('plot_content');
 
   if(container != null){
@@ -201,20 +198,20 @@ async function make_map(selected_params,selected_wmo,goShip_only){
     .addTo(map)
   }
 
-// Continuous Gradient Colorbar
+//Create legend, positioned on the bottomright
 const legend = L.control({ position: 'bottomright' });
 
-//This part was complete cheating. When a legend is added to the map,
-//though, this function runs and  
+//legend.onAdd runs a specified function when the legend is added to the map
 legend.onAdd = function () {
   const div = L.DomUtil.create('div', 'info legend');
 
   // Calculate mid value
   //const mid_value = (min_value + max_value) / 2;
 
-  // Get colors for min, mid, max
+  // Get colors for min, mid, max using chroma color_scale function 
+  //(returned by the make_palette function)
   const minColor = color_scale(min_value).hex();
-  const midColor = color_scale(mid_value).hex();
+  const midColor = color_scale(0).hex();
   const maxColor = color_scale(max_value).hex();
 
   div.innerHTML = `
@@ -258,7 +255,7 @@ legend.onAdd = function () {
         grid-area: 2/2/2/3;
         justify-content: space-between">
         <div>${max_value.toFixed(2)}</div>
-        <div>${mid_value.toFixed(2)}</div>
+        <div>${0}</div>
         <div>${min_value.toFixed(2)}</div>
       </div>
     </div>
@@ -273,9 +270,9 @@ legend.onAdd = function () {
 
   return div;
 };
-
+  //Add legend to map; legend is styled based on legend.onAdd
   legend.addTo(map);
-
+  
   return map
 }
 
@@ -344,10 +341,10 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
       param_titles_y = Array(param_titles_x.length).fill("Depth")
       param_units_y = Array(param_titles_x.length).fill("(m)")
 
-      ref_line_x0 = 0;
-      ref_line_y0 = 0;
-      ref_line_x1 = 0;
-      ref_line_y1 = 0;
+      ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+      ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+      ref_line_x1 = Math.min(...x1_plot_data.filter(Number.isFinite));
+      ref_line_y1 = Math.min(...x1_plot_data.filter(Number.isFinite));
 
       stat_string_join = ""
     }
@@ -361,7 +358,6 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
       diff_data = calculate_diff(x1_data,x2_data,y1_data)
       x1_plot_data = diff_data.diff;
       y1_plot_data = diff_data.aux_filter;
-      console.log(x1_plot_data.length>3)
       //The following creates an array of the same length of param_titles_x and fills
       //with "Depth (m)"
       param_titles_y = Array(param_titles_x.length).fill("Depth")
