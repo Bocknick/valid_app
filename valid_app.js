@@ -165,7 +165,7 @@ async function make_map(selected_params,selected_wmo,goShip_only){
   let lat = map_data.map(row => row["LAT"]);
   let DIFF = map_data.map(row => row["DIFF"]);
   let WMO = map_data.map(row => row["WMO"]);
-  //let CRUISE = map_data.map(row => row["CRUISE"]);
+  let CRUISE = map_data.map(row => row["CRUISE"]);
 
   const {color_scale, min_value, mid_value, max_value } = make_palette(DIFF);
 
@@ -190,15 +190,16 @@ async function make_map(selected_params,selected_wmo,goShip_only){
 
 
   for(let i = 0; i < lon.length; i++){
+    let tooltip_string = `<b>WMO: </b> ${WMO[i]} <br><b>CRUISE: </b>${CRUISE[i]}`
     L.circleMarker([lat[i],lon[i]],
       {fillColor: color_scale(DIFF[i]).hex(),color: "black",weight: 0.5,fillOpacity: 1,radius: 2.5})
-     
-    .bindTooltip(WMO[i].toString(), {permanent: false, direction: 'top', offset: [0, -5]})
+    .bindTooltip(tooltip_string, 
+      {permanent: false, direction: 'top', offset: [0, -5]})
     .addTo(map)
   }
 
-    // Continuous Gradient Colorbar
-  const legend = L.control({ position: 'bottomright' });
+// Continuous Gradient Colorbar
+const legend = L.control({ position: 'bottomright' });
 
 //This part was complete cheating. When a legend is added to the map,
 //though, this function runs and  
@@ -227,9 +228,10 @@ legend.onAdd = function () {
         <div style="
           font-weight: bold; 
           margin-bottom: 6px; 
-          text-align: left; 
+          text-align: center; 
           width: 75px;">
-          Bottle - Float
+          Bottle-Float<br>
+          ${selected_params}
         </div>
       </div>
       <div style="

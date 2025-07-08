@@ -31,7 +31,7 @@ async function metadata_retriever(goShip_only){
 }
 
 async function metrics_retriever(selected_param,selected_wmo,goShip_only){
-  param_list = ["WMO","PARAM","LAT","LON","DIFF"]
+  param_list = ["WMO","PARAM","LAT","LON","DIFF","CRUISE"]
   let metrics_data
   let metrics_error
 
@@ -144,7 +144,7 @@ function make_palette(input_data){
   //Note use of spread operator (...) to unlist array
   const min_value = Math.min(...input_data)
   const mid_value = ss.median(input_data)
-  console.log(mid_value);
+
   const max_value = Math.max(...input_data)
   const color_scale =  chroma.scale('YlOrRd').domain([min_value, max_value]);
   //const color_values = input_data.map(val => color_scale(val).hex());
