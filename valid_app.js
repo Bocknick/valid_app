@@ -387,11 +387,11 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only,do_l
       }
 
       if(do_reg===true){
-        reg_result = regress(x1_plot_data, y1_plot_data);
+        reg_result = model_II_regress(x1_plot_data, y1_plot_data);
         slope = Number(reg_result.slope.toFixed(2));
         intercept = Number(reg_result.intercept.toFixed(2));
         r2 = reg_result.r2.toFixed(2)
-        stat_string = [`Y = ${slope}X + ${intercept}`,`<b>R2</b> = ${r2}`]
+        stat_string = [`<b>Model II Regression</b>`,`Y = ${slope}X + ${intercept}`,`<b>R2</b> = ${r2}`]
         stat_string_join = stat_string.join("<br>");
         
         ref_line_y0 = slope * ref_line_x0 + intercept;

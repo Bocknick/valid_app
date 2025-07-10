@@ -222,41 +222,32 @@ function calculate_diff(x,y,aux){
   return {diff,aux_filter,x_filter,y_filter};
 }
 
-//From didinko on StackOverflow
-//https://stackoverflow.com/questions/6195335/linear-regression-in-javascript
-const regress = (x, y) => {
-    const n = y.length;
-    let sx = 0;
-    let sy = 0;
-    let sxy = 0;
-    let sxx = 0;
-    let syy = 0;
-    for (let i = 0; i < n; i++) {
-        sx += x[i];
-        sy += y[i];
-        sxy += x[i] * y[i];
-        sxx += x[i] * x[i];
-        syy += y[i] * y[i];
-    }
-    const mx = sx / n;
-    const my = sy / n;
-    const yy = n * syy - sy * sy;
-    const xx = n * sxx - sx * sx;
-    const xy = n * sxy - sx * sy;
-    const slope = xy / xx;
-    const intercept = my - slope * mx;
-    const r = xy / Math.sqrt(xx * yy);
-    const r2 = Math.pow(r,2);
-    let sst = 0;
-    for (let i = 0; i < n; i++) {
-       sst += Math.pow((y[i] - my), 2);
-    }
-    const sse = sst - r2 * sst;
-    const see = Math.sqrt(sse / (n - 2));
-    const ssr = sst - sse;
-    return {slope, intercept, r, r2, sse, ssr, sst, sy, sx, see};
+//Model II regression code adapted from MATLAB provided at...
+//https://www.mbari.org/technology/matlab-scripts/linear-regressions/
+const model_II_regress = (X,Y) => {
+    n = X.length
+    Sx = X.reduce((a,b) => a + b);
+    Sy = Y.reduce((a,b) => a + b,0);
+    xbar = Sx/n;
+    ybar = Sy/n;
+
+    U = X.map(row => row - xbar);
+    V = Y.map(row => row - ybar);
+    UV = U.map((row,i) => row * V[i])
+    SUV = UV.reduce((a,b) => a + b)
+    U2 = U.map(row => row**2);
+    V2 = V.map(row => row**2);
+    SU2 = U2.reduce((a,b) => a + b);
+    SV2 = V2.reduce((a,b) => a+b)
+
+    sigx = (SU2/(n-1))**(1/2)
+    sigy = (SV2/(n-1))**(1/2)
+    slope = ((SV2 - SU2 + Math.sqrt(((SV2 - SU2)**2)+(4 * SUV**2)))/(2*SUV))
+    intercept = ybar - slope * xbar
+    r = SUV/Math.sqrt(SU2 * SV2)
+    r2 = r**2
+    return {slope, intercept, r, r2};
 }
-regress([1, 2, 3, 4, 5], [1, 2, 3, 4, 3]);
 
 //The HTML runs autocomplete via JS with inp = "myInput" and arr = countries
 //"myInput" is the ID for the HTML input field
