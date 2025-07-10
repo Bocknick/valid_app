@@ -1,14 +1,13 @@
 async function metadata_retriever(goShip_only){
-  param_list = ["WMO","bottle_lon","bottle_lat","float_lon","float_lat"]
+  //param_list = ["WMO_ID","CRUISE_ID","GO_SHIP"]
   let meta_data;
   let wmo_data_error;
 
   if(goShip_only === true) {
     ({data: meta_data, error: wmo_data_error} = await supa_client
-        .from('svb_meta')
-        .select(param_list.join(','))
-        .eq('GO_SHIP',goShip_only)
-        .range(0, 9999));
+        .from('meta_data')
+        .select(`wmo_matchup(WMO),${selected_params.join(',')}`)
+        .eq('go_ship',goShip_only))
 
     if (wmo_data_error) {
       console.error('Supabase error:', wmo_data_error);
@@ -17,32 +16,53 @@ async function metadata_retriever(goShip_only){
 
   } else {
     ({data: meta_data, error: wmo_data_error} = await supa_client
-        .from('svb_meta')
-        .select(param_list.join(','))
-        .range(0, 9999));
-
+        .from('meta_data')
+        .select(`wmo_matchup(WMO)`))
+    
     if (wmo_data_error) {
       console.error('Supabase error:', wmo_data_error);
       return;
     }
 
   }
+
   return meta_data
 }
 
 async function metrics_retriever(selected_param,selected_wmo,goShip_only){
-  param_list = ["WMO","PARAM","LAT","LON","DIFF","CRUISE"]
+
+
+  param_list = ["WMO_ID","PARAM","LAT","LON","DIFF","CRUISE_ID"]
+  possible_params = ["Nitrate","pH","Oxygen","DIC","pCO2","Alkalinity","Chlorophyll","Location"]
+  possible_units = ["\u03BCmol/kg","Total","\u03BCmol/kg","\u03BCmol/kg","\u03BCatm","\u03BCmol/kg","mg/m^3","Degs."]
+  param_test = possible_params.map(row => row === selected_param)
+  selected_units = possible_units.filter((_,i)=>param_test[i]);
+  legend_title = selected_param + " ("+selected_units+")";
+  console.log(legend_title);
+
   let metrics_data
   let metrics_error
+  let wmo_ids
 
+  ({data: wmo_ids, error: wmo_error} = await supa_client
+    .from('wmo_matchup')
+    .select('WMO_ID,WMO')
+    .in('WMO',selected_wmo));
+
+    if(wmo_error){
+      console.error('Supabase error:', metrics_error);
+      return;
+    }
+  
+  selected_ids = wmo_ids.map(row => row['WMO_ID']);
+  
   if(goShip_only === true){
     ({data: metrics_data, error: metrics_error} = await supa_client
-        .from('svb_metrics')
-        .select(param_list.join(','))
+        .from('map_data')
+        .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${param_list.join(',')}`)
         .ilike('PARAM',selected_param)
-        .in('WMO',selected_wmo)
-        .eq('GO_SHIP',goShip_only)
-        .range(0, 9999));
+        .in('WMO_ID',selected_ids)
+        .eq('GO_SHIP',goShip_only));
         
         if (metrics_error) {
         console.error('Supabase error:', metrics_error);
@@ -50,11 +70,10 @@ async function metrics_retriever(selected_param,selected_wmo,goShip_only){
         }
     } else{
     ({data: metrics_data, error: metrics_error} = await supa_client
-        .from('svb_metrics')
-        .select(param_list.join(','))
+        .from('map_data')
+        .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${param_list.join(',')}`)
         .ilike('PARAM',selected_param)
-        .in('WMO',selected_wmo)
-        .range(0, 9999));
+        .in('WMO_ID',selected_ids));
         
         if (metrics_error) {
         console.error('Supabase error:', metrics_error);
@@ -62,14 +81,18 @@ async function metrics_retriever(selected_param,selected_wmo,goShip_only){
         }
     }
 
-  return metrics_data
+  return {metrics_data,legend_title}
 }
 
 async function data_retriever(selected_params,selected_wmo,goShip_only){
   param_set_x = [];
   param_set_y = [];
-  let selected_data
+  let selected_data;
   let data_error;
+  let wmo_ids;
+  let wmo_error;
+  let cruise_ids;
+
   if(selected_params == "Biogeochemical"){
     param_set_x = ["bottle_oxygen","bottle_nitrate","bottle_ph"];
     param_set_y = ["float_oxygen","float_nitrate","float_ph"];
@@ -98,44 +121,62 @@ async function data_retriever(selected_params,selected_wmo,goShip_only){
     param_titles_x = ["Bottle POC","Bottle CHL"]
     param_titles_y = ["Float BBP","Float CHL"]
   }
-  aux_params = ['WMO','CRUISE','depth']
-  selected_params = param_set_x.concat(param_set_y,aux_params)
+  selected_params = param_set_x.concat(param_set_y,'depth');
 
+  //Retrieve WMO_IDs for current WMOs
+  ({ data: wmo_ids, error: wmo_error} = await supa_client
+    .from('wmo_matchup')
+    .select('WMO_ID,WMO')
+    .in('WMO',selected_wmo));
+
+    if(wmo_error){
+      console.error('Supabase error:', wmo_error);
+      return;
+    }
+  
+  //Retrieve CRUISE_IDs for 
+  const selected_ids = wmo_ids.map(row => row['WMO_ID']);
   if(goShip_only === true){
+    //Retrieve CRUISE_IDs for GO_SHIP cruises
+    //Retrieve WMO_IDs for current WMOs
+    ({data: cruise_ids, error: cruise_error} = await supa_client
+      .from('meta_data')
+      .select('CRUISE_ID,GO_SHIP')
+      .eq('GO_SHIP',goShip_only));
+
+      if(cruise_error){
+        console.error('Supabase error:', wmo_error);
+        return;
+      }
+    
+    let selected_cruises = cruise_ids.map(row => row["CRUISE_ID"])
+    selected_cruises = [...new Set(selected_cruises)];
     ({data: selected_data, error: data_error} = await supa_client
-        .from('svb_data')
+        .from('profile_data')
         //.select requires a list of items separated by commas,
         //hence x_params.join(',')
-        .select(selected_params.join(','))
-        .in('WMO',selected_wmo)
-        .eq('GO_SHIP',goShip_only)
-        //.filter('WMO','regex',)
-        //supabase normally only returns the first 1000 rows of data.
-        //.range increases this to the specified index
-        .range(0, 9999));
+        .select(`CRUISE_ID,wmo_matchup(WMO),cruise_matchup(CRUISE),${selected_params.join(',')}`)
+        .in('CRUISE_ID',selected_cruises));
         
         if (data_error) {
-        console.error('Supabase error:', data_error);
-        return;
+          console.error('Supabase error:', data_error);
+          return;
         }
   } else{
     ({data: selected_data, error: data_error} = await supa_client
-        .from('svb_data')
+        .from('profile_data')
         //.select requires a list of items separated by commas,
         //hence x_params.join(',')
-        .select(selected_params.join(','))
-        .in('WMO',selected_wmo)
-        //.filter('WMO','regex',)
-        //supabase normally only returns the first 1000 rows of data.
-        //.range increases this to the specified index
-        .range(0, 9999));
+        .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${selected_params.join(',')}`)
+        .in('WMO_ID',selected_ids));
         
         if (data_error) {
-        console.error('Supabase error:', data_error);
-        return;
+          console.error('Supabase error:', data_error);
+          return;
         }
   }
 
+//console.log(JSON.stringify(selected_data[0]));  
 return {selected_data,param_set_x,param_set_y,
         param_units_x,param_units_y,param_titles_x,param_titles_y}
 }
@@ -178,8 +219,44 @@ function calculate_diff(x,y,aux){
   //x_filter.map calculates the difference between x_filter and y_filter
   //for each element in x_filter.
   const diff = x_filter.map((val,i) => val-y_filter[i]);
-  return {diff,aux_filter};
+  return {diff,aux_filter,x_filter,y_filter};
 }
+
+//From didinko on StackOverflow
+//https://stackoverflow.com/questions/6195335/linear-regression-in-javascript
+const regress = (x, y) => {
+    const n = y.length;
+    let sx = 0;
+    let sy = 0;
+    let sxy = 0;
+    let sxx = 0;
+    let syy = 0;
+    for (let i = 0; i < n; i++) {
+        sx += x[i];
+        sy += y[i];
+        sxy += x[i] * y[i];
+        sxx += x[i] * x[i];
+        syy += y[i] * y[i];
+    }
+    const mx = sx / n;
+    const my = sy / n;
+    const yy = n * syy - sy * sy;
+    const xx = n * sxx - sx * sx;
+    const xy = n * sxy - sx * sy;
+    const slope = xy / xx;
+    const intercept = my - slope * mx;
+    const r = xy / Math.sqrt(xx * yy);
+    const r2 = Math.pow(r,2);
+    let sst = 0;
+    for (let i = 0; i < n; i++) {
+       sst += Math.pow((y[i] - my), 2);
+    }
+    const sse = sst - r2 * sst;
+    const see = Math.sqrt(sse / (n - 2));
+    const ssr = sst - sse;
+    return {slope, intercept, r, r2, sse, ssr, sst, sy, sx, see};
+}
+regress([1, 2, 3, 4, 5], [1, 2, 3, 4, 3]);
 
 //The HTML runs autocomplete via JS with inp = "myInput" and arr = countries
 //"myInput" is the ID for the HTML input field

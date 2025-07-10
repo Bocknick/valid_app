@@ -7,34 +7,44 @@ const supa_client = supabase.createClient(
 const container = document.getElementById('app-container');
 container.innerHTML =
     `<div class = "app-container">
-        <div class = "dropdown" id = "params">
-            <button>Parameters</button>
-            <div class = "content" id = "param_content">
-                <a>Biogeochemical</a>
-                <a>BGC Derived</a>
-                <a>Bio-optical</a>
-            </div>
-        </div>
-        <div class = "dropdown" id = "plot_type">
-            <button>Plot Type</button>
-            <div class = "content">
-                <a>Scatter Plot</a>
-                <a>Profiles</a>
-                <a>Anomaly Profiles</a>
-                <a>Map</a>
-            </div>
-        </div>
-        <form id = 'wmo_form' autocomplete="off" style = "width:250px; display:flex; gap: 4px;">
-            <div class="autocomplete" style="flex: 2;">
-                <input id="wmo_input" type="text" placeholder="WMO" style = "width: 100%;">
-            </div>
-            <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px;">
-        </form>
-        <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/Float_vs_Bottle_Table.txt" class = "file_link_button">Download Data</a>
-        <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/README_FLOATvsBOTTLE.txt" class = "file_link_button">Readme</a><br>
-        <div style="margin: 8px 0;">
-            <input type="checkbox" id="goship_checkbox">
-            <label for="goship_checkbox">GO-SHIP only</label>
+        <div class = "controls">
+          <div class = "dropdown" id = "params">
+              <button>Parameters</button>
+              <div class = "content" id = "param_content">
+                  <a>Biogeochemical</a>
+                  <a>BGC Derived</a>
+                  <a>Bio-optical</a>
+              </div>
+          </div>
+          <div class = "dropdown" id = "plot_type">
+              <button>Plot Type</button>
+              <div class = "content">
+                  <a>Scatter Plot</a>
+                  <a>Profiles</a>
+                  <a>Anomaly Profiles</a>
+                  <a>Map</a>
+              </div>
+          </div>
+          <form id = 'wmo_form' autocomplete="off" style = "width:250px; display:flex; gap: 4px;">
+              <div class="autocomplete" style="flex: 2;">
+                  <input id="wmo_input" type="text" placeholder="WMO" style = "width: 100%;">
+              </div>
+              <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px;">
+          </form>
+          <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/Float_vs_Bottle_Table.txt" class = "file_link_button">Download Data</a>
+          <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/README_FLOATvsBOTTLE.txt" class = "file_link_button">Readme</a><br>
+          <div class checkbox">
+              <input type="checkbox" id="goship_checkbox">
+              <label for="goship_checkbox">GO-SHIP only</label>
+          </div>
+          <div class checkbox id = "log_content">
+              <input type="checkbox" id="log_checkbox">
+              <label for="log_checkbox">Log Transform Axes</label>
+          </div>
+          <div class checkbox" id = "reg_content">
+              <input type="checkbox" id="regs_checkbox">
+              <label for="regs_checkbox">Plot Regressions</label>
+          </div>
         </div>
         <div id="plot_content" style="width:600px;height:300px;"></div>
     </div>`
@@ -45,24 +55,29 @@ let input_wmos;
 const dropdown_options = document.getElementById('param_content')
 let input_param = "Biogeochemical"
 let goShip_only = false;
+let do_reg = false;
+let do_log = false;
 let input_plot_type = "Scatter Plot"
 //Run metadata retriever; generate initial wmo_list and 
 //run wrapper with all wmos
 
 metadata_retriever(goShip_only).then(result => {
-  wmo_list = result.map(row => row['WMO']);
+  
+  wmo_list = result.map(row => row.wmo_matchup.WMO);
   autocomplete(document.getElementById("wmo_input"), wmo_list);
 
   input_wmos = wmo_list;
   //Run wrapper for the first time using default input_param
   //and input_plot_type to load initial plot view
-  wrapper(input_param, input_plot_type, input_wmos,goShip_only)
+  wrapper(input_param, input_plot_type, input_wmos,goShip_only,do_reg,do_log)
 })
 
 //Grab HTML elements for listeners
 const param_content = document.getElementById('param_content');
 const plot_type_content = document.getElementById("plot_type");
-const go_ship = document.getElementById("goship_checkbox")
+const go_ship_state = document.getElementById("goship_checkbox");
+const log_state = document.getElementById("log_checkbox");
+const reg_state = document.getElementById("regs_checkbox");
 
 //Get the wmo_form <form> object and add a listener to the submit <input> object
 document.getElementById('wmo_form').addEventListener('submit', function(event) {
@@ -77,14 +92,34 @@ document.getElementById('wmo_form').addEventListener('submit', function(event) {
     wrapper(parameter = input_param,plot_type = input_plot_type,selected_wmo=input_wmos,goShip_only)
 });
 
-//listen for a click on param_content
-go_ship.addEventListener("change",function(event){
-    if (go_ship.checked) {
+//listen for a change of checkedness for go_ship
+go_ship_state.addEventListener("change",function(event){
+    if (go_ship_state.checked) {
         goShip_only=true;
     } else {
         goShip_only=false;
     }
-  wrapper(input_param, input_plot_type, input_wmos,goShip_only)
+  wrapper(input_param, input_plot_type, input_wmos,goShip_only,do_log,do_reg)
+})
+
+//listen for a click on param_content
+reg_state.addEventListener("change",function(event){
+    if (reg_state.checked) {
+        do_reg=true;
+    } else {
+        do_reg=false;
+    }
+  wrapper(input_param, input_plot_type, input_wmos,goShip_only,do_log,do_reg)
+})
+
+//listen for a click on log checkbox
+log_state.addEventListener("change",function(event){
+    if (log_state.checked) {
+        do_log=true;
+    } else {
+        do_log=false;
+    }
+  wrapper(input_param, input_plot_type, input_wmos,goShip_only,do_log,do_reg)
 })
 
 //listen for a click on param_content
@@ -92,13 +127,22 @@ param_content.addEventListener("click",function(event){
   if(event.target.tagName == "A"){
     input_param = event.target.textContent
   }
-  wrapper(input_param, input_plot_type, input_wmos,goShip_only)
+  wrapper(input_param, input_plot_type, input_wmos,goShip_only,do_log,do_reg)
 })
 
 //Listen for plot_type selections
 plot_type_content.addEventListener("click",function(event){
+  const reg_content = document.getElementById("reg_content");
+  const log_content = document.getElementById("log_content");
   if(event.target.tagName == "A"){
     input_plot_type = event.target.textContent
+  }
+  if(input_plot_type != "Scatter Plot"){
+    log_content.style.display = 'none';
+    reg_content.style.display = 'none';
+  } else{
+    log_content.style.display = 'inline-block';
+    reg_content.style.display = 'inline-block';
   }
   //If user selects map, update dropdown options and set
   //input_param to Nitrate  
@@ -121,10 +165,10 @@ plot_type_content.addEventListener("click",function(event){
     input_param = 'Biogeochemical'
   }
 
-  wrapper(parameter = input_param,plot_type = input_plot_type,selected_wmo=input_wmos,goShip_only)
+  wrapper(parameter = input_param,plot_type = input_plot_type,selected_wmo=input_wmos,goShip_only,do_log,do_reg)
 })
 
-function wrapper(parameter, plot_type, selected_wmo, goShip_only) {
+function wrapper(parameter, plot_type, selected_wmo, goShip_only,do_log,do_reg) {
   //Lines to the next comment are very much Chat GPT, but are 
   //required to clear the plotting space after a Leaflet map is generated.
   //Leaflet seems to alter "plot_content," creating issues when displaying
@@ -148,7 +192,7 @@ function wrapper(parameter, plot_type, selected_wmo, goShip_only) {
     make_map(parameter,selected_wmo,goShip_only);
   }
 
-  else {make_plot(parameter,plot_type,selected_wmo,goShip_only).then(result => {
+  else {make_plot(parameter,plot_type,selected_wmo,goShip_only,do_log,do_reg).then(result => {
     Plotly.newPlot('plot_content',
       result.traces,
       result.layout,
@@ -160,12 +204,14 @@ function wrapper(parameter, plot_type, selected_wmo, goShip_only) {
 
 async function make_map(selected_params,selected_wmo,goShip_only){
   const map_data = await metrics_retriever(selected_params,selected_wmo,goShip_only);
+  plot_data = map_data.metrics_data;
+  legend_title = map_data.legend_title;
 
-  let lon = map_data.map(row => row["LON"]);
-  let lat = map_data.map(row => row["LAT"]);
-  let DIFF = map_data.map(row => row["DIFF"]);
-  let WMO = map_data.map(row => row["WMO"]);
-  let CRUISE = map_data.map(row => row["CRUISE"]);
+  let lon = plot_data.map(row => row["LON"]);
+  let lat = plot_data.map(row => row["LAT"]);
+  let DIFF = plot_data.map(row => row["DIFF"]);
+  let WMO = plot_data.map(row => row["WMO"]);
+  let CRUISE = plot_data.map(row => row["CRUISE"]);
 
   const {color_scale, min_value, mid_value, max_value } = make_palette(DIFF);
 
@@ -231,7 +277,7 @@ legend.onAdd = function () {
           text-align: center; 
           width: 75px;">
           Bottle-Float<br>
-          ${selected_params}
+          ${legend_title}
         </div>
       </div>
       <div style="
@@ -276,10 +322,10 @@ legend.onAdd = function () {
   return map
 }
 
-async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
+async function make_plot(selected_params,plot_type,selected_wmo,goShip_only,do_log,do_reg){
   const plot_data = await data_retriever(selected_params,selected_wmo,goShip_only);
-  const wmo_plot_data = plot_data.selected_data.map(row => row["WMO"]);
-  const cruise_plot_data = plot_data.selected_data.map(row => row["CRUISE"]);
+  const wmo_plot_data = plot_data.selected_data.map(row => row.wmo_matchup.WMO);
+  const cruise_plot_data = plot_data.selected_data.map(row => row.cruise_matchup.CRUISE);
   const traces = [];
   const shapes = [];
   const annotations = [];
@@ -287,6 +333,7 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
   let x2_plot_data = null;
   let y1_plot_data = null;
   let y2_plot_data = null;
+  let ref_line_x0 = null;
 
   const layout = {
     grid: { rows: 1, columns: 3, pattern: 'independent',
@@ -304,6 +351,7 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
     if(plot_type=="Scatter Plot"){
       x1_plot_data = plot_data.selected_data.map(row => row[plot_data.param_set_x[i]]);
       y1_plot_data = plot_data.selected_data.map(row => row[plot_data.param_set_y[i]]);
+
       x2_plot_data = null;
       y2_plot_data = null;
       
@@ -311,11 +359,24 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
       ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
       ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
       ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
-
+ 
       stat_string_join = ""
       diff_data = calculate_diff(x1_plot_data,y1_plot_data,null).diff;
 
-      if(diff_data.length > 3){
+      if(do_log===true){
+        x1_plot_data = x1_plot_data.map(row => Math.log(row));
+        y1_plot_data = y1_plot_data.map(row => Math.log(row));
+        ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+        ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+        ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
+        ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
+      }
+
+      filt_data = calculate_diff(x1_plot_data,y1_plot_data);
+      x1_plot_data = filt_data.x_filter;
+      y1_plot_data = filt_data.y_filter; 
+
+      if(diff_data.length > 3 & do_reg === false){
         diff_mean = ss.mean(diff_data).toFixed(2)
         diff_sd = ss.standardDeviation(diff_data).toFixed(2)
         diff_med = ss.median(diff_data).toFixed(2)
@@ -323,6 +384,18 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
           `Median: ${diff_med}`,`SD: ${diff_sd}`]
         //Note that 
         stat_string_join = stat_string.join("<br>")
+      }
+
+      if(do_reg===true){
+        reg_result = regress(x1_plot_data, y1_plot_data);
+        slope = Number(reg_result.slope.toFixed(2));
+        intercept = Number(reg_result.intercept.toFixed(2));
+        r2 = reg_result.r2.toFixed(2)
+        stat_string = [`Y = ${slope}X + ${intercept}`,`<b>R2</b> = ${r2}`]
+        stat_string_join = stat_string.join("<br>");
+        
+        ref_line_y0 = slope * ref_line_x0 + intercept;
+        ref_line_y1 = slope * ref_line_x1 + intercept;
       }
 
       if(plot_data.param_units_x[i]==plot_data.param_units_y[i]){
@@ -383,7 +456,7 @@ async function make_plot(selected_params,plot_type,selected_wmo,goShip_only){
     var current_annotation = {
       text: stat_string_join,
       x: 0.06,
-      y: 0.95,
+      y: 0.97,
       showarrow: false,
       align: "left",
       //x and y describe a plot position relative to xref and yref. The following
