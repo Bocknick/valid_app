@@ -2,7 +2,7 @@
 
 .app-container{
     display: grid;
-    grid-template-columns: 250px 750px;
+    grid-template-columns: 250px 900px;
     align-items: top;
     padding-top: 0px;
     margin-top: 0px;
@@ -102,8 +102,9 @@
 
 #plot_content{
     background-color: white;
-    overflow: hidden;
     margin-left: 10px;
+    width: 900px;
+    height: 300px;
     grid-row: 1/1;
     grid-column: 2/2; 
 }
