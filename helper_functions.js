@@ -75,14 +75,15 @@ async function make_map(map_data,selected_wmo){
   if(container != null){
     container._leaflet_id = null;
   }
-
+  bounds = L.latlng
   var map = L.map('plot_content', {
     center: [0,0],
-    zoom: 1,
+    zoom: 1.5,
     maxBoundsViscosity: 1.0,
-    attributionControl: false,
-    maxBounds: [[90,-185],[-90,185]]})
-
+    zoomControl: false,
+    attributionControl: false})
+  
+  map.fitBounds([[50,-180],[-70,180]])
   leafletMap = map; // Save the map so we can remove it later
 
   const ocean_res = await fetch('https://raw.githubusercontent.com/martynafford/natural-earth-geojson/refs/heads/master/110m/physical/ne_110m_ocean.json');
@@ -114,29 +115,32 @@ legend.onAdd = function () {
   const minColor = color_scale(min_value).hex();
   const midColor = color_scale(0).hex();
   const maxColor = color_scale(max_value).hex();
-
+  
+  //Following code structure mostly from chat GPT with modifications
+  //(e.g., grid layout) to improve appearance. Note that in grid-layout
+  //grid-area definitions are non-inclusive. Format is
+  //start_row/start_col/end_row/end_col
   div.innerHTML = `
-    <div 
-      style="
+    <div id = legend_container style="
         display: grid; 
+        border: 1px solid;
+        border-color: black;
+        padding: 5px;
         align-items: center; 
-        grid-template-rows: 50px 100px;
+        grid-template-rows: 70px 100px;
         grid-template-columns: 40px 40px;">
-      <div style="
-        grid-area: 1/1/1/2;
+      <div id = title_text style="
+        grid-area: 1/1/2/3;
         align-items: center;
-        margin-right: 10px;">
-        <div style="
-          font-weight: bold; 
-          margin-bottom: 6px; 
-          text-align: center; 
-          width: 75px;">
-          Bottle-Float<br>
-          ${legend_title}
-        </div>
+        text-align: center;
+        width: 100%;
+        margin-bottom: 10px;">
+        <b>Bottle-Float<br>
+        ${legend_title}</b>
       </div>
-      <div style="
+      <div id colorbar style="
           grid-area: 2/1/2/1;
+          margin-left: 5px;
           background: linear-gradient(
             to top,
             ${minColor} 0%,
@@ -144,10 +148,9 @@ legend.onAdd = function () {
             ${maxColor} 100%
           );
           height: 100%;
-          width: 60%;
-          border: 1px solid black;">
+          width: 60%;">
       </div>
-      <div style="
+      <div id colorbar_text style="
         font-size: 12px; 
         display: flex;
         height: 100%;
@@ -165,7 +168,7 @@ legend.onAdd = function () {
   div.style.position = 'relative';
   div.style.border = "black"
   div.style.background = 'white';
-  div.style.padding = '8px';
+  //div.style.padding = '8px';
   //div.style.boxShadow = '0 0 6px rgba(0,0,0,0.3)';
   div.style.display = 'grid';
   div.style.alignItems = 'center';
@@ -431,10 +434,17 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
   let y1_plot_data = null;
   let y2_plot_data = null;
 
-  const layout = {
+  let layout = {
     grid: { rows: 1, columns: 3, pattern: 'independent',
-        xgap: .25},
-    margin: {t: 0, b: 0, l: 50, r: 10},    
+      xgap: 0.2},
+    autoexpand: true,
+    //margin controls the margin of the entire plotting area,
+    //not individual subplots. Note that plotly's default
+    //margins are relatively large, so removing the margin
+    //line results in more comptessed plots. Also, The plot title
+    //appears within the margin, so too small of a margin will push the
+    //title into the axis
+    margin: {t: 10, b: 50, l: 50, r: 50},    
     width: 750,
     height: 300,
     hovermode: 'closest',
@@ -621,14 +631,14 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       //This adjusts the xaxis appearance for a specific subplot
   layout[`xaxis${i+1}`] = {
       showline: true,
-      linewidth: 1,
+      linewidth: .5,
       linecolor: 'black',
-      mirror: true,
-      showgrid: false,
+      tickfont: {size: 12},
+      showgrid: true,
       zeroline: false,
       title: {text: [param_titles_x[i],param_units_x[i]].join(" "),
-      font: {size: 12}},
-      automargin: true,
+        font: {size: 12}, standoff: 7},
+      automargin: false,
       //title: {text: [x_titles[i],x_units[i]].join(" "),
     }
     
@@ -636,14 +646,14 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
   layout[`yaxis${i+1}`] = {
       //autorange: 'reversed',
       showline: true,
-      linewidth: 1,
+      linewidth: .5,
       linecolor: 'black',
-      mirror: true,
-      showgrid: false,
+      tickfont: {size: 10},
+      showgrid: true,
       zeroline: false,
       title: {text: [param_titles_y[i],param_units_y[i]].join(" "),
-      font: {size: 12}},
-      automargin: true,
+        font: {size: 12},standoff: 3},
+      automargin: false,
   }
   //Reverse axis for profiles
   if(plot_type == "Profiles"){

@@ -25,11 +25,11 @@ container.innerHTML =
                   <a>Map</a>
               </div>
           </div>
-          <form id = 'wmo_form' autocomplete="off" style = "width:250px; display:flex; gap: 4px;">
+          <form id = 'wmo_form' autocomplete="off" style = "width:200px; display:flex; gap: 4px;">
               <div class="autocomplete" style="flex: 2;">
-                  <input id="wmo_input" type="text" placeholder="WMO" style = "width: 100%;">
+                  <input id="wmo_input" type="text" placeholder="WMO" style = "width: 100%; font-size: 14px;">
               </div>
-              <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px;">
+              <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px; font-size: 14px; padding: 12px;">
           </form>
           <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/Float_vs_Bottle_Table.txt" class = "file_link_button">Download Data</a>
           <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/README_FLOATvsBOTTLE.txt" class = "file_link_button">Readme</a><br>
@@ -147,6 +147,7 @@ param_content.addEventListener("click",function(event){
   if(event.target.tagName == "A"){
     input_param = event.target.textContent
     if(input_plot_type === "Map"){
+      refresh();
       get_map_data(input_param).then(result => {
         input_map_data = result
         plot_wrapper(input_map_data,input_plot_type,selected_wmos,do_log,do_reg);
