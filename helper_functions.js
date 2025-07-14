@@ -472,8 +472,13 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       diff_data = calculate_diff(x1_plot_data,y1_plot_data,null).diff;
 
       if(do_log===true){
-        x1_plot_data = x1_plot_data.map(row => Math.log(row));
-        y1_plot_data = y1_plot_data.map(row => Math.log(row));
+        x1_plot_data = x1_plot_data.map(row => Math.log10(row));
+        y1_plot_data = y1_plot_data.map(row => Math.log10(row));
+          
+        ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));  
+        ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+        ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
+        ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
       }
 
       if(same_units !== true){
