@@ -29,7 +29,7 @@ container.innerHTML =
               <div class="autocomplete" style="flex: 2;">
                   <input id="wmo_input" type="text" placeholder="WMO" style = "width: 100%; font-size: 14px;">
               </div>
-              <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px; font-size: 14px; padding: 12px;">
+              <input type="submit" value = "Submit" style = "flex: 1; margin-bottom: 5px; font-size: 12px; padding: 12px;">
           </form>
           <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/Float_vs_Bottle_Table.txt" class = "file_link_button">Download Data</a>
           <a href = "https://www.go-bgc.org/wp-content/uploads/2024/11/README_FLOATvsBOTTLE.txt" class = "file_link_button">Readme</a><br>
@@ -73,7 +73,8 @@ const wmo_form = document.getElementById('wmo_form')
 //Run metadata retriever; generate initial wmo_list and 
 //run wrapper with all wmos
 get_wmos(goShip_only).then(result => {
-  selected_wmos = result.map(row => row.wmo_matchup.WMO);
+  wmo_list = result.map(row => row.wmo_matchup.WMO);
+  selected_wmos = wmo_list
   autocomplete(document.getElementById("wmo_input"), selected_wmos);
 
   //Run wrapper for the first time using default input_param
@@ -147,7 +148,6 @@ param_content.addEventListener("click",function(event){
   if(event.target.tagName == "A"){
     input_param = event.target.textContent
     if(input_plot_type === "Map"){
-      refresh();
       get_map_data(input_param).then(result => {
         input_map_data = result
         plot_wrapper(input_map_data,input_plot_type,selected_wmos,do_log,do_reg);

@@ -53,7 +53,6 @@ async function get_map_data(selected_param){
   return {metrics_data,legend_title}
 }
 
-
 async function make_map(map_data,selected_wmo){
   plot_data = map_data.metrics_data;
   legend_title = map_data.legend_title;
@@ -462,10 +461,11 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       x1_plot_data = filter_by_wmo_cruise(x1_plot_data,wmo_plot_data,selected_wmos)
       y1_plot_data = filter_by_wmo_cruise(y1_plot_data,wmo_plot_data,selected_wmos)
 
-      ref_line_x0 = 0;
-      ref_line_y0 = 0;
-      ref_line_x1 = 0;
-      ref_line_y1 = 0;
+      ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));  
+      ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+      ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
+      ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
+      let round_to = 2;
       same_units = plot_data.param_units_x[i]==plot_data.param_units_y[i]
 
       stat_string_display = ""
@@ -476,11 +476,17 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
         y1_plot_data = y1_plot_data.map(row => Math.log(row));
       }
 
-      if(same_units === true){
+      if(same_units !== true){
+        round_to = 5;
         ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));  
-        ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
+        ref_line_y0 = Math.min(...y1_plot_data.filter(Number.isFinite));
         ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
-        ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
+        ref_line_y1 = Math.max(...y1_plot_data.filter(Number.isFinite));
+
+        stat_string = [`<b>Bottle-Float</b>`,`N = ${diff_data.length}`,`Mean: --`,
+          `Median: --`,`SD: --`]
+        //Note that 
+        stat_string_display = stat_string.join("<br>")
       }
 
       filt_data = calculate_diff(x1_plot_data,y1_plot_data);
@@ -499,14 +505,15 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
 
       if(do_reg===true & x1_plot_data.length>3){
         reg_result = model_II_regress(x1_plot_data, y1_plot_data);
-        slope = Number(reg_result.slope.toFixed(2));
-        intercept = Number(reg_result.intercept.toFixed(2));
+        slope = reg_result.slope
+        intercept = reg_result.intercept
         r2 = reg_result.r2.toFixed(2)
-        stat_string = [`<b>Model II Regression</b>`,`Y = ${slope}X + ${intercept}`,`<b>R2</b> = ${r2}`]
+        stat_string = [`<b>Model II Regression</b>`,`N = ${x1_plot_data.length}`,`Y = ${Number(slope.toFixed(round_to))}X + ${Number(intercept.toFixed(round_to))}`,`<b>R2</b> = ${r2}`]
         stat_string_display = stat_string.join("<br>");
         
         ref_line_y0 = slope * ref_line_x0 + intercept;
         ref_line_y1 = slope * ref_line_x1 + intercept;
+        console.log(`slope: ${slope}`)
       }
     }
 
