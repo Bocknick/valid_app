@@ -156,7 +156,8 @@ input[type=submit] {
   background-color: #fff;
   border: 0px solid black;
   border-bottom: none;
-  font-size: 12px;
+  font-size: 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   font-family: Menlo,Consolas,monaco,monospace;padding:.8em 1em;
   border-top: none;
   z-index: 99;
