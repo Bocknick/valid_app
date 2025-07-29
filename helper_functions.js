@@ -27,12 +27,12 @@ async function get_wmos(goShip_only){
   }
 
   return meta_data
-}
+}filter_by_wmo_cruise
 
 async function get_map_data(selected_param){
   param_list = ["WMO_ID","PARAM","LAT","LON","DIFF","CRUISE_ID"]
-  possible_params = ["Nitrate","pH","Oxygen","DIC","pCO2","Alkalinity","Chlorophyll","Location"]
-  possible_units = ["\u03BCmol/kg","Total","\u03BCmol/kg","\u03BCmol/kg","\u03BCatm","\u03BCmol/kg","mg/m^3","Degs."]
+  possible_params = ["Nitrate","pH","Oxygen","DIC","pCO2","Alkalinity","Chlorophyll","Space","Time"]
+  possible_units = ["\u03BCmol/kg","Total","\u03BCmol/kg","\u03BCmol/kg","\u03BCatm","\u03BCmol/kg","mg/m^3","km","hours"]
   param_test = possible_params.map(row => row === selected_param)
   selected_units = possible_units.filter((_,i)=>param_test[i]);
   legend_title = selected_param + " ("+selected_units+")";
@@ -89,8 +89,8 @@ async function make_map(map_data,selected_wmo){
   const ocean = await ocean_res.json();
   L.geoJSON(ocean,{color:'#5BBCD6',weight: 0.5,color: 'black',fillColor: '#ADD8E6',fillOpacity: 1}).addTo(map);
 
-
   for(let i = 0; i < lon.length; i++){
+    console.log(lat[i])
     let tooltip_string = `<b>WMO: </b> ${WMO[i]} <br><b>CRUISE: </b>${CRUISE[i]}`
     L.circleMarker([lat[i],lon[i]],
       {fillColor: color_scale(DIFF[i]).hex(),color: "black",weight: 0.5,fillOpacity: 1,radius: 2.5})
@@ -182,54 +182,55 @@ legend.onAdd = function () {
 
 
 async function get_profile_data(selected_params){
-  param_set_x = [];
-  param_set_y = [];
+  bottle_params = [];
+  float_params = [];
   let selected_data;
   let data_error;
 
   if(selected_params == "Biogeochemical"){
-    param_set_x = ["bottle_oxygen","bottle_nitrate","bottle_ph"];
-    param_set_y = ["float_oxygen","float_nitrate","float_ph"];
+    bottle_params = ["bottle_oxygen","bottle_nitrate","bottle_ph"];
+    float_params = ["float_oxygen","float_nitrate","float_ph"];
     //Splitting the units and the title makes it easier to compare units for each plot
     //to decide whether or not to draw 1-to-1 line
-    param_units_x = ["(\u03BCmol/kg)","(\u03BCmol/kg)","total"]
-    param_units_y = ["(\u03BCmol/kg)","(\u03BCmol/kg)","total"]
-    param_titles_x = ["Bottle Oxygen","Bottle Nitrate","Bottle pH in situ"]
-    param_titles_y = ["Float Oxygen","Float Nitrate","Float pH in situ"]
+    bottle_units = ["(\u03BCmol/kg)","(\u03BCmol/kg)","total"]
+    float_units = ["(\u03BCmol/kg)","(\u03BCmol/kg)","total"]
+    bottle_titles = ["Bottle Oxygen","Bottle Nitrate","Bottle pH in situ"]
+    float_titles = ["Float Oxygen","Float Nitrate","Float pH in situ"]
   }
 
   if(selected_params == "BGC Derived"){
-    param_set_x = ["bottle_pco2","bottle_dic","bottle_alk"];
-    param_set_y = ["float_pco2","float_dic","float_alk"];
-    param_units_x = ["(\u03BCatm)","(\u03BCmol/kg)","(\u03BCmol/kg)"]
-    param_units_y = ["(\u03BCatm)","(\u03BCmol/kg)","(\u03BCmol/kg)"]
-    param_titles_x = ["Bottle PCO2","Bottle DIC","Bottle Alk."]
+    bottle_params = ["bottle_pco2","bottle_dic","bottle_alk"];
+    float_params = ["float_pco2","float_dic","float_alk"];
+    bottle_units = ["(\u03BCatm)","(\u03BCmol/kg)","(\u03BCmol/kg)"]
+    float_units = ["(\u03BCatm)","(\u03BCmol/kg)","(\u03BCmol/kg)"]
+    bottle_titles = ["Bottle PCO2","Bottle DIC","Bottle Alk."]
     param_titles_y = ["Float PCO2","Float DIC","Float Alk."]
   }
 
   if(selected_params == "Bio-optical"){
-    param_set_x = ["bottle_poc","bottle_chl"];
-    param_set_y = ["float_bbp","float_chl"];
-    param_units_x = ["(mg/m^3)","(mg/m^3)"]
-    param_units_y = ["(m^-1)","(mg/m^3)"]
-    param_titles_x = ["Bottle POC","Bottle CHL"]
-    param_titles_y = ["Float BBP","Float CHL"]
+    bottle_params = ["bottle_poc","bottle_chl"];
+    float_params = ["float_bbp","float_chl"];
+    bottle_units = ["(mg/m^3)","(mg/m^3)"]
+    float_units = ["(m^-1)","(mg/m^3)"]
+    bottle_titles = ["Bottle POC","Bottle CHL"]
+    float_titles = ["Float BBP","Float CHL"]
   }
-  selected_params = param_set_x.concat(param_set_y,'depth');
+
+  param_names = bottle_params.concat(float_params,'depth');
 
   ({data: selected_data, error: data_error} = await supa_client
       .from('profile_data')
       //.select requires a list of items separated by commas,
       //hence x_params.join(',')
-      .select(`CRUISE_ID,wmo_matchup(WMO),cruise_matchup(CRUISE),${selected_params.join(',')}`));
+      .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${param_names.join(',')}`));
       
       if (data_error) {
         console.error('Supabase error:', data_error);
         return;
       }
 
-  return {selected_data,param_set_x,param_set_y,
-          param_units_x,param_units_y,param_titles_x,param_titles_y}
+  return {selected_data,bottle_params,float_params,
+          bottle_units,float_units,bottle_titles,float_titles}
 }
 
 function make_palette(input_data){
@@ -413,17 +414,31 @@ document.addEventListener("click", function (e) {
 });
 } 
 
-
 function filter_by_wmo_cruise(input_data,input_wmos,selected_wmos){
   wmo_test = input_wmos.map(row => selected_wmos.includes(row));
   data_result = input_data.filter((_,i)=>wmo_test[i]);
   return(data_result);
 }
 
+clean_subtract = function(x,y){
+  if(x == null || y == null){
+    return(null)
+  } 
+  return Number((x-y));
+}
+
+find_complete_rows = function(x,y){
+  if(x == null || y == null){
+    return(false)
+  } 
+  return true;
+}
+
 function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
   //const plot_data = await get_profile_data(selected_params,selected_wmo,goShip_only);
-  const wmo_plot_data = plot_data.selected_data.map(row => row.wmo_matchup.WMO);
-  const cruise_plot_data = plot_data.selected_data.map(row => row.cruise_matchup.CRUISE);
+  let wmo_data = plot_data.selected_data.map(row => row.wmo_matchup.WMO);
+  let cruise_data = plot_data.selected_data.map(row => row.cruise_matchup.CRUISE);
+  let depth_data = plot_data.selected_data.map(row => row["depth"]);
   const traces = [];
   const shapes = [];
   const annotations = [];
@@ -448,28 +463,45 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
     height: 300,
     hovermode: 'closest',
     showlegend: true,
+    legend: {bordercolor: 'black', borderwidth: 1},
     font: {family:  "Menlo,Consolas,monaco,monospace", size: 14},
     plot_bgcolor: 'white',
   };
 
-  for(let i = 0; i < 3; i++){
-    if(plot_type=="Scatter Plot"){
-      x1_plot_data = plot_data.selected_data.map(row => row[plot_data.param_set_x[i]]);
-      y1_plot_data = plot_data.selected_data.map(row => row[plot_data.param_set_y[i]]);
-      x2_plot_data = null;
-      y2_plot_data = null;
-      x1_plot_data = filter_by_wmo_cruise(x1_plot_data,wmo_plot_data,selected_wmos)
-      y1_plot_data = filter_by_wmo_cruise(y1_plot_data,wmo_plot_data,selected_wmos)
+  for(let i = 0; i < plot_data.bottle_params.length; i++){
+    bottle_data = plot_data.selected_data.map(row => row[plot_data.bottle_params[i]]);
+    float_data = plot_data.selected_data.map(row => row[plot_data.float_params[i]]);
+    complete_rows = bottle_data.map((value,i)=>find_complete_rows(value,float_data[i]))
 
+    bottle_plot_data = bottle_data.filter((value,i)=>complete_rows[i])
+    float_plot_data = float_data.filter((value,i)=>complete_rows[i])
+    diff_plot_data = float_plot_data.map((value,i)=>value-bottle_plot_data[i])
+    depth_plot_data = depth_data.filter((value,i)=>complete_rows[i])
+    wmo_plot_data = wmo_data.filter((value,i)=>complete_rows[i])
+    cruise_plot_data = cruise_data.filter((value,i)=>complete_rows[i])
+
+    bottle_plot_data = filter_by_wmo_cruise(bottle_plot_data,wmo_plot_data,selected_wmos)
+    float_plot_data = filter_by_wmo_cruise(float_plot_data,wmo_plot_data,selected_wmos)
+    diff_plot_data = filter_by_wmo_cruise(diff_plot_data,wmo_plot_data,selected_wmos)
+    depth_plot_data = filter_by_wmo_cruise(depth_plot_data,wmo_plot_data,selected_wmos)
+    wmo_plot_data = filter_by_wmo_cruise(wmo_plot_data,wmo_plot_data,selected_wmos)
+    cruise_plot_data = filter_by_wmo_cruise(cruise_plot_data,wmo_plot_data,selected_wmos)
+    
+    if(plot_type=="Scatter Plot"){
+      //Get bottle and float data from plot_data
+      x1_plot_data = bottle_plot_data
+      y1_plot_data = float_plot_data
+
+  
+      //Set default reference line values to min/max values for bottle data 
       ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));  
       ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
       ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
       ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
       let round_to = 2;
-      same_units = plot_data.param_units_x[i]==plot_data.param_units_y[i]
 
+      same_units = plot_data.bottle_units[i]===plot_data.float_units[i]
       stat_string_display = ""
-      diff_data = calculate_diff(x1_plot_data,y1_plot_data,null).diff;
 
       if(do_log===true){
         x1_plot_data = x1_plot_data.map(row => Math.log10(row));
@@ -481,6 +513,8 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
         ref_line_y1 = Math.max(...x1_plot_data.filter(Number.isFinite));
       }
 
+      //If units are not the same, define reference line based on min/max
+      //values for each parameter
       if(same_units !== true){
         round_to = 5;
         ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));  
@@ -488,21 +522,18 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
         ref_line_x1 = Math.max(...x1_plot_data.filter(Number.isFinite));
         ref_line_y1 = Math.max(...y1_plot_data.filter(Number.isFinite));
 
-        stat_string = [`<b>Bottle-Float</b>`,`N = ${diff_data.length}`,`Mean: --`,
+        stat_string = [`<b>Float-Bottle</b>`,`N = ${diff_plot_data.length}`,`Mean: --`,
           `Median: --`,`SD: --`]
         //Note that 
         stat_string_display = stat_string.join("<br>")
       }
 
-      filt_data = calculate_diff(x1_plot_data,y1_plot_data);
-      x1_plot_data = filt_data.x_filter;
-      y1_plot_data = filt_data.y_filter; 
-
-      if(diff_data.length > 3 & do_reg === false & same_units === true){
-        diff_mean = ss.mean(diff_data).toFixed(2)
-        diff_sd = ss.standardDeviation(diff_data).toFixed(2)
-        diff_med = ss.median(diff_data).toFixed(2)
-        stat_string = [`<b>Bottle-Float</b>`,`N = ${diff_data.length}`,`Mean: ${diff_mean}`,
+      if(diff_plot_data.length > 3 & do_reg === false & same_units === true){
+        //Filter diff data to only retain non-null values
+        diff_mean = ss.mean(diff_plot_data).toFixed(2)
+        diff_sd = ss.standardDeviation(diff_plot_data).toFixed(2)
+        diff_med = ss.median(diff_plot_data).toFixed(2)
+        stat_string = [`<b>Float-Bottle</b>`,`N = ${diff_plot_data.length}`,`Mean: ${diff_mean}`,
           `Median: ${diff_med}`,`SD: ${diff_sd}`]
         //Note that 
         stat_string_display = stat_string.join("<br>")
@@ -518,24 +549,25 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
         
         ref_line_y0 = slope * ref_line_x0 + intercept;
         ref_line_y1 = slope * ref_line_x1 + intercept;
-        console.log(`slope: ${slope}`)
       }
     }
 
     if(plot_type==="Profiles"){
-      x1_plot_data = plot_data.selected_data.map(row => row[plot_data.param_set_x[i]]);
-      y1_plot_data = plot_data.selected_data.map(row => row["depth"]);
-      x2_plot_data = plot_data.selected_data.map(row => row[plot_data.param_set_y[i]]);;
-      y2_plot_data = plot_data.selected_data.map(row => row["depth"]);
-      
+      x1_plot_data = bottle_data
+      y1_plot_data = depth_data
+      x2_plot_data = float_data
+      y2_plot_data = depth_data
+      wmo_plot_data = wmo_data
+      cruise_plot_data = cruise_data
+
       x1_plot_data = filter_by_wmo_cruise(x1_plot_data,wmo_plot_data,selected_wmos)
       y1_plot_data = filter_by_wmo_cruise(y1_plot_data,wmo_plot_data,selected_wmos)
       x2_plot_data = filter_by_wmo_cruise(x2_plot_data,wmo_plot_data,selected_wmos)
       y2_plot_data = filter_by_wmo_cruise(y2_plot_data,wmo_plot_data,selected_wmos)
       //The following creates an array of the same length of param_titles_x and fills
       //with "Depth (m)"
-      param_titles_y = Array(param_titles_x.length).fill("Depth")
-      param_units_y = Array(param_titles_x.length).fill("(m)")
+      param_titles_y = Array(plot_data.bottle_params.length).fill("Depth")
+      param_units_y = Array(plot_data.bottle_params.length).fill("(m)")
 
       ref_line_x0 = Math.min(...x1_plot_data.filter(Number.isFinite));
       ref_line_y0 = Math.min(...x1_plot_data.filter(Number.isFinite));
@@ -546,24 +578,15 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
     }
    
     if(plot_type==="Anomaly Profiles"){
-      x1_data = plot_data.selected_data.map(row => row[plot_data.param_set_x[i]]);
-      y1_data = plot_data.selected_data.map(row => row["depth"]);
-      x2_data = plot_data.selected_data.map(row => row[plot_data.param_set_y[i]]);;
-      y2_plot_data = null;
-      
-      x1_data = filter_by_wmo_cruise(x1_data,wmo_plot_data,selected_wmos)
-      x2_data = filter_by_wmo_cruise(x2_data,wmo_plot_data,selected_wmos)
-      y1_data = filter_by_wmo_cruise(y1_data,wmo_plot_data,selected_wmos)
-
-      diff_data = calculate_diff(x1_data,x2_data,y1_data)
-      x1_plot_data = diff_data.diff;
-      y1_plot_data = diff_data.aux_filter;
+      x1_plot_data = diff_plot_data
+      y1_plot_data = depth_plot_data
 
       //The following creates an array of the same length of param_titles_x and fills
       //with "Depth (m)"
-      param_titles_y = Array(param_titles_x.length).fill("Depth")
-      param_units_y = Array(param_titles_x.length).fill("(m)")
+      param_titles_y = Array(plot_data.bottle_params.length).fill("Depth")
+      param_units_y = Array(plot_data.bottle_params.length).fill("(m)")
 
+      //Create a reference line at x = 0
       ref_line_x0 = 0;
       ref_line_y0 = 0;
       ref_line_x1 = 0;
@@ -574,7 +597,7 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
         diff_mean = ss.mean(x1_plot_data).toFixed(2)
         diff_sd = ss.standardDeviation(x1_plot_data).toFixed(2)
         diff_med = ss.median(x1_plot_data).toFixed(2)
-        stat_string = [`<b>Bottle-Float</b>`,`N = ${x1_plot_data.length}`,`Mean: ${diff_mean}`,
+        stat_string = [`<b>Float-Bottle</b>`,`N = ${x1_plot_data.length}`,`Mean: ${diff_mean}`,
           `Median: ${diff_med}`,`SD: ${diff_sd}`]
         //Note that 
         stat_string_display = stat_string.join("<br>")
@@ -596,6 +619,11 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       font: {family:  "Menlo,Consolas,monaco,monospace", size: 10}
     }
 
+    console.log("WMO Data Rows:"+wmo_plot_data.length)
+    console.log("Cruise Data Rows:"+cruise_plot_data.length)
+    console.log("X1 Data Rows:"+x1_plot_data.length)
+    console.log("Y1 Data Rows:"+y1_plot_data.length)
+
     var current_trace_1 = {
       x: x1_plot_data,
       y: y1_plot_data,
@@ -616,8 +644,10 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
     var current_trace_2 = {
       x: x2_plot_data,
       y: y2_plot_data,
-      text: wmo_plot_data,
-      hovertemplate: '<b>WMO: </b>%{text} <br><b>Cruise:</b><extra></extra>',
+      customdata: wmo_plot_data.map((val,i)=>[val,cruise_plot_data[i]]),
+      //Note: the trace name is normally displayed via the <extra> tag.
+      //Including <extra></extra> prevents it from being displayed.
+      hovertemplate: '<b>WMO: </b>%{customdata[0]} <br><b>Cruise: </b>%{customdata[1]}<extra></extra>',
       type: 'scatter',
       mode: 'markers',
       name: 'Float Data',
@@ -648,7 +678,7 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       tickfont: {size: 12},
       showgrid: true,
       zeroline: false,
-      title: {text: [param_titles_x[i],param_units_x[i]].join(" "),
+      title: {text: [bottle_titles[i],bottle_units[i]].join(" "),
         font: {size: 12}, standoff: 7},
       automargin: false,
       //title: {text: [x_titles[i],x_units[i]].join(" "),
@@ -663,7 +693,7 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       tickfont: {size: 10},
       showgrid: true,
       zeroline: false,
-      title: {text: [param_titles_y[i],param_units_y[i]].join(" "),
+      title: {text: [float_titles[i],float_units[i]].join(" "),
         font: {size: 12},standoff: 3},
       automargin: false,
   }

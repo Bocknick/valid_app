@@ -145,6 +145,7 @@ log_state.addEventListener("change",function(event){
 
 //listen for a click on param_content
 param_content.addEventListener("click",function(event){
+  refresh();
   if(event.target.tagName == "A"){
     input_param = event.target.textContent
     if(input_plot_type === "Map"){
@@ -193,7 +194,8 @@ plot_type_content.addEventListener("click",function(event){
       <a>pCO2</a>
       <a>Alkalinity</a>
       <a>Chlorophyll</a>
-      <a>Location</a>`
+      <a>Space</a>
+      <a>Time</a>`
     input_param = "Nitrate"
     get_map_data(input_param).then(result => {
       input_map_data = result
