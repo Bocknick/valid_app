@@ -29,7 +29,7 @@ async function get_wmos(goShip_only){
   return meta_data
 }filter_by_wmo_cruise
 
-async function get_map_data(selected_param){
+async function get_map_data(selected_param,max_dist){
   param_list = ["WMO_ID","PARAM","LAT","LON","DIFF","CRUISE_ID"]
   possible_params = ["Nitrate","pH","Oxygen","DIC","pCO2","Alkalinity","Chlorophyll","Space","Time"]
   possible_units = ["\u03BCmol/kg","Total","\u03BCmol/kg","\u03BCmol/kg","\u03BCatm","\u03BCmol/kg","mg/m^3","km","hours"]
@@ -43,7 +43,8 @@ async function get_map_data(selected_param){
   ({data: metrics_data, error: metrics_error} = await supa_client
       .from('map_data')
       .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${param_list.join(',')}`)
-      .ilike('PARAM',selected_param));
+      .ilike('PARAM',selected_param)
+      .lt('DIST',max_dist));
       
       if (metrics_error) {
       console.error('Supabase error:', metrics_error);
@@ -90,13 +91,16 @@ async function make_map(map_data,selected_wmo){
   L.geoJSON(ocean,{color:'#5BBCD6',weight: 0.5,color: 'black',fillColor: '#ADD8E6',fillOpacity: 1}).addTo(map);
 
   for(let i = 0; i < lon.length; i++){
-    console.log(lat[i])
     let tooltip_string = `<b>WMO: </b> ${WMO[i]} <br><b>CRUISE: </b>${CRUISE[i]}`
     L.circleMarker([lat[i],lon[i]],
       {fillColor: color_scale(DIFF[i]).hex(),color: "black",weight: 0.5,fillOpacity: 1,radius: 2.5})
     .bindTooltip(tooltip_string, 
       {permanent: false, direction: 'top', offset: [0, -5], fillColor: '#0397A8'})
     .addTo(map)
+    // .on('click', function () {
+    //   selected_wmos = WMO[i];
+    //   plot_wrapper(input_plot_data,input_plot_type,selected_wmos,do_log,do_reg);
+    // })
   }
 
 //Create legend, positioned on the bottomright
@@ -222,7 +226,8 @@ async function get_profile_data(selected_params){
       .from('profile_data')
       //.select requires a list of items separated by commas,
       //hence x_params.join(',')
-      .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${param_names.join(',')}`));
+      .select(`wmo_matchup(WMO),cruise_matchup(CRUISE),${param_names.join(',')}`)
+      .lt('Space',max_dist));
       
       if (data_error) {
         console.error('Supabase error:', data_error);
@@ -415,6 +420,7 @@ document.addEventListener("click", function (e) {
 } 
 
 function filter_by_wmo_cruise(input_data,input_wmos,selected_wmos){
+  //console.log(selected_wmos)
   wmo_test = input_wmos.map(row => selected_wmos.includes(row));
   data_result = input_data.filter((_,i)=>wmo_test[i]);
   return(data_result);
@@ -618,11 +624,6 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
       //the GO-BGC website
       font: {family:  "Menlo,Consolas,monaco,monospace", size: 10}
     }
-
-    console.log("WMO Data Rows:"+wmo_plot_data.length)
-    console.log("Cruise Data Rows:"+cruise_plot_data.length)
-    console.log("X1 Data Rows:"+x1_plot_data.length)
-    console.log("Y1 Data Rows:"+y1_plot_data.length)
 
     var current_trace_1 = {
       x: x1_plot_data,
