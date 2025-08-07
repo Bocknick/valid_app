@@ -182,7 +182,7 @@ param_content.addEventListener("click",function(event){
   if(event.target.tagName == "A"){
     input_param = event.target.textContent
     if(input_plot_type === "Map"){
-      get_map_data(input_param).then(result => {
+      get_map_data(input_param,max_dist).then(result => {
         input_map_data = result
         plot_wrapper(input_map_data,input_plot_type,selected_wmos,do_log,do_reg);
       })

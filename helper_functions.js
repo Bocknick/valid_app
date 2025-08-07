@@ -420,7 +420,6 @@ document.addEventListener("click", function (e) {
 } 
 
 function filter_by_wmo_cruise(input_data,input_wmos,selected_wmos){
-  //console.log(selected_wmos)
   wmo_test = input_wmos.map(row => selected_wmos.includes(row));
   data_result = input_data.filter((_,i)=>wmo_test[i]);
   return(data_result);
