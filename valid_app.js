@@ -242,6 +242,10 @@ plot_type_content.addEventListener("click",function(event){
 
 reset_clicked.addEventListener('click', function(event){
   refresh()
+  dropdown_options.innerHTML = 
+    `<a>Biogeochemical</a>
+    <a>BGC Derived</a>
+    <a>Bio-optical</a>`
   input_param = "Biogeochemical"
   goShip_only = false;
   do_reg = false;
