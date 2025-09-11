@@ -184,7 +184,6 @@ legend.onAdd = function () {
   return map
 }
 
-
 async function get_profile_data(selected_params){
   bottle_params = [];
   float_params = [];
@@ -208,7 +207,7 @@ async function get_profile_data(selected_params){
     bottle_units = ["(\u03BCatm)","(\u03BCmol/kg)","(\u03BCmol/kg)"]
     float_units = ["(\u03BCatm)","(\u03BCmol/kg)","(\u03BCmol/kg)"]
     bottle_titles = ["Bottle PCO2","Bottle DIC","Bottle Alk."]
-    param_titles_y = ["Float PCO2","Float DIC","Float Alk."]
+    float_titles = ["Float PCO2","Float DIC","Float Alk."]
   }
 
   if(selected_params == "Bio-optical"){
@@ -443,6 +442,7 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
   //const plot_data = await get_profile_data(selected_params,selected_wmo,goShip_only);
   let wmo_data = plot_data.selected_data.map(row => row.wmo_matchup.WMO);
   let cruise_data = plot_data.selected_data.map(row => row.cruise_matchup.CRUISE);
+  console.log()
   let depth_data = plot_data.selected_data.map(row => row["depth"]);
   const traces = [];
   const shapes = [];
@@ -485,13 +485,15 @@ function make_plot(plot_data,plot_type,selected_wmos,do_log,do_reg){
     wmo_plot_data = wmo_data.filter((value,i)=>complete_rows[i])
     cruise_plot_data = cruise_data.filter((value,i)=>complete_rows[i])
 
+
     bottle_plot_data = filter_by_wmo_cruise(bottle_plot_data,wmo_plot_data,selected_wmos)
     float_plot_data = filter_by_wmo_cruise(float_plot_data,wmo_plot_data,selected_wmos)
     diff_plot_data = filter_by_wmo_cruise(diff_plot_data,wmo_plot_data,selected_wmos)
     depth_plot_data = filter_by_wmo_cruise(depth_plot_data,wmo_plot_data,selected_wmos)
-    wmo_plot_data = filter_by_wmo_cruise(wmo_plot_data,wmo_plot_data,selected_wmos)
     cruise_plot_data = filter_by_wmo_cruise(cruise_plot_data,wmo_plot_data,selected_wmos)
-    
+    wmo_plot_data = filter_by_wmo_cruise(wmo_plot_data,wmo_plot_data,selected_wmos)
+  
+    console.log(wmo_plot_data);
     if(plot_type=="Scatter Plot"){
       //Get bottle and float data from plot_data
       x1_plot_data = bottle_plot_data
