@@ -138,7 +138,7 @@ legend.onAdd = function () {
         text-align: center;
         width: 100%;
         margin-bottom: 10px;">
-        <b>Bottle-Float<br>
+        <b>Float-Bottle<br>
         ${legend_title}</b>
       </div>
       <div id colorbar style="
